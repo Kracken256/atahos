@@ -12,8 +12,8 @@ fn main() {
     let profile = env::var("PROFILE").expect("PROFILE not set");
     let target = env::var("TARGET").expect("TARGET not set");
 
-    // Create the build-iso script
     create_build_iso_script(&manifest_dir, &profile, &target);
+    create_run_script(&manifest_dir, &profile);
 }
 
 /// Create a script to build the ISO after the binary is compiled
@@ -51,4 +51,34 @@ echo "ISO created at target/${{TARGET_TRIPLE}}/${{PROFILE}}/atahos.iso"
 
     println!("cargo:warning=Created build-iso.sh script");
     println!("cargo:warning=After building, run: ./build-iso.sh");
+}
+
+/// Create a script to run the virtual machine after the ISO is built
+fn create_run_script(manifest_dir: &Path, profile: &str) {
+    let script_path = manifest_dir.join("run.sh");
+    let script_content = format!(
+        r#"#!/bin/bash
+set -e
+
+VM_NAME="atahos_vm"
+
+# Launch virtual machine with the built ISO
+qemu-system-i386 -cdrom "target/i686-unknown-linux-gnu/{profile}/atahos.iso" -m 512M -boot d -name ${{VM_NAME}}
+"#,
+        profile = profile
+    );
+
+    fs::write(&script_path, script_content).expect("Failed to create run.sh script");
+
+    // Make it executable on Unix
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(&script_path).unwrap().permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&script_path, perms).unwrap();
+    }
+
+    println!("cargo:warning=Created run.sh script");
+    println!("cargo:warning=After building, run: ./run.sh");
 }
