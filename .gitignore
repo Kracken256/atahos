@@ -4,3 +4,4 @@
 /home/target
 /libs/target
 build-iso.sh
+iso_root/boot/atahos_core
