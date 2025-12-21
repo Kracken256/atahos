@@ -1,6 +1,0 @@
-[package]
-name = "atahos_libs"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]

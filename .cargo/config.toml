@@ -1,0 +1,14 @@
+[build]
+target = "i686-unknown-linux-gnu" # Generic x86
+
+[target.i686-unknown-linux-gnu]
+rustflags = [
+    "-C",
+    "link-arg=-Tsrc/linker.ld",
+    "-C",
+    "link-arg=-nostartfiles",
+    "-C",
+    "link-arg=-nodefaultlibs",
+    "-C",
+    "relocation-model=static",
+]
