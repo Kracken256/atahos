@@ -1,0 +1,10 @@
+{
+  "formatFiles.excludedFolders": ["node_modules", ".git", "dist", ".chrome"],
+  "rust-analyzer.linkedProjects": [
+    "Cargo.toml",
+    "boot/Cargo.toml",
+    "core/Cargo.toml",
+    "home/Cargo.toml",
+    "libs/Cargo.toml"
+  ]
+}

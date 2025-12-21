@@ -24,22 +24,58 @@ This is a Cargo workspace with four primary components:
 
 ## Critical Build Workflow
 
-### Building the Bootloader
+### Building the Complete ISO Image
+
+The root crate's build script automatically orchestrates the entire build:
+
+```bash
+cargo build          # Creates target/debug/atahos.iso
+cargo build --release # Creates target/release/atahos.iso
+```
+
+The build process:
+
+1. Builds the UEFI bootloader from `boot/` workspace
+2. Copies the `image/` directory structure to a temporary location
+3. Places the bootloader at `EFI/EFI/BOOT/BOOTx64.EFI` (UEFI standard path)
+4. Creates a bootable ISO image using `xorriso`
+5. Outputs `atahos.iso` to the target directory
+
+**Requirements**: Install `xorriso` for ISO creation:
+
+```bash
+# Debian/Ubuntu
+sudo apt install xorriso
+
+# Arch Linux
+sudo pacman -S libisoburn
+
+# macOS
+brew install xorriso
+```
+
+### Building Only the Bootloader
+
+To build just the bootloader without creating an ISO:
 
 ```bash
 cd boot
 cargo build --target x86_64-unknown-uefi
 ```
 
-The output `.efi` file goes to `target/x86_64-unknown-uefi/debug/atahos_boot.efi` (or `release/`).
+Output: `boot/target/x86_64-unknown-uefi/debug/atahos_boot.efi`
 
-### Deployment
+### Running the OS
 
-The bootloader must be placed at `image/EFI/EFI/BOOT/BOOTx64.EFI` for UEFI systems to recognize it.
+```bash
+# Using QEMU with OVMF (UEFI firmware)
+qemu-system-x86_64 -bios /usr/share/ovmf/OVMF.fd -cdrom target/debug/atahos.iso
+```
 
 ### Debugging
 
-Use `objdump -d` to inspect the compiled `.efi` binary (as seen in terminal history).
+- Use `objdump -d` to inspect the compiled `.efi` binary
+- The ISO contains the full image structure from `image/` plus the bootloader
 
 ## Code Conventions
 

@@ -2,9 +2,4 @@
 name = "atahos"
 version = "0.1.0"
 edition = "2024"
-
-[workspace]
-members = ["boot", "core", "home", "libs"]
-
-[[bin]]
-name = "atahos"
+build = "build.rs"
