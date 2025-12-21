@@ -1,137 +1,15 @@
-# Atah OS - AI Coding Agent Instructions
+# Atah OS – AI working notes
 
-## Project Overview
+- **What this is:** Minimal Multiboot v1 kernel that writes a greeting to the VGA text buffer; fully `#![no_std]`/`#![no_main]` with manual entry point and panic loop. Core logic in [src/main.rs](src/main.rs#L1-L35).
+- **Target/abi:** Builds for `i686-unknown-linux-gnu` with a bare-metal-style link; configured via [.cargo/config.toml](.cargo/config.toml#L1-L9). Do not use `std` or host syscalls; stick to `core`.
+- **Link/layout:** Custom linker script [src/linker.ld](src/linker.ld#L1-L8) places `.text` at 1MiB and keeps the Multiboot header first. Keep `_start`, `MULTIBOOT_HEADER`, and the panic/eh symbols present when editing entry code.
+- **Build command:** `cargo build` (target is fixed in config). Profiles force `panic = "abort"` per [Cargo.toml](Cargo.toml#L1-L8).
+- **ISO pipeline:** Build triggers [build.rs](build.rs#L5-L49) which rewrites `build-iso.sh` for the active profile; script copies `target/i686-unknown-linux-gnu/<profile>/atahos_core` into `iso_root/boot/` and runs `grub-mkrescue`. After a successful build, run `./build-iso.sh` to emit `target/<profile>/atahos.iso`.
+- **Prereqs:** Host needs `grub-mkrescue` (and its deps like `xorriso`) installed; ensure the Rust target is added (`rustup target add i686-unknown-linux-gnu`).
+- **Boot media layout:** GRUB menu at [iso_root/boot/grub/grub.cfg](iso_root/boot/grub/grub.cfg#L1-L6) loads `/boot/atahos_core` via `multiboot`. Keep the binary name/path stable or update both the copy step and menu.
+- **Editor setup:** VS Code sets `rust-analyzer.cargo.target` to `i686-unknown-none` in [.vscode/settings.json](.vscode/settings.json#L1-L3) to avoid host std; cargo actually builds for `i686-unknown-linux-gnu`. If diagnostics look odd, align these targets.
+- **Modifying entry:** `_start` writes bytes directly to VGA memory at `0xb8000` with attribute `0x0B`. Adjust text or color in [src/main.rs](src/main.rs#L16-L27); keep the infinite loop to avoid falling off entry.
+- **Adding code:** Stay `no_std`; avoid dynamic allocations and RTTI. If introducing new sections (data/bss), extend [src/linker.ld](src/linker.ld#L1-L8) accordingly and preserve `.multiboot` at the start.
+- **Rebuild triggers:** build script reruns when `src/` or `iso_root/` change; no need to touch `build.rs` manually when editing GRUB config or kernel code.
 
-Atah OS is a UEFI-based operating system written in Rust, targeting bare-metal x86_64 architecture. This is a low-level systems project with no standard library (`#![no_std]`).
-
-## Architecture
-
-### Workspace Structure
-
-This is a Cargo workspace with four primary components:
-
-- **`boot/`** - UEFI bootloader (builds to `.efi` executable)
-- **`core/`** - Core OS components (currently stub)
-- **`home/`** - Home/user-space components (currently stub)
-- **`libs/`** - Shared libraries for OS components (currently stub)
-- **`image/`** - EFI boot image structure with directories for deployment
-
-### Build Targets
-
-- The bootloader (`boot/`) targets **`x86_64-unknown-uefi`** exclusively
-- Build configuration is in `boot/.cargo/config.toml` with default target set
-- Toolchain specified in `boot/rust-toolchain.toml`
-
-## Critical Build Workflow
-
-### Building the Complete ISO Image
-
-The root crate's build script automatically orchestrates the entire build:
-
-```bash
-cargo build          # Creates target/debug/atahos.iso
-cargo build --release # Creates target/release/atahos.iso
-```
-
-The build process:
-
-1. Builds the UEFI bootloader from `boot/` workspace
-2. Copies the `image/` directory structure to a temporary location
-3. Places the bootloader at `EFI/EFI/BOOT/BOOTx64.EFI` (UEFI standard path)
-4. Creates a bootable ISO image using `xorriso`
-5. Outputs `atahos.iso` to the target directory
-
-**Requirements**: Install `xorriso` for ISO creation:
-
-```bash
-# Debian/Ubuntu
-sudo apt install xorriso
-
-# Arch Linux
-sudo pacman -S libisoburn
-
-# macOS
-brew install xorriso
-```
-
-### Building Only the Bootloader
-
-To build just the bootloader without creating an ISO:
-
-```bash
-cd boot
-cargo build --target x86_64-unknown-uefi
-```
-
-Output: `boot/target/x86_64-unknown-uefi/debug/atahos_boot.efi`
-
-### Running the OS
-
-```bash
-# Using QEMU with OVMF (UEFI firmware)
-qemu-system-x86_64 -bios /usr/share/ovmf/OVMF.fd -cdrom target/debug/atahos.iso
-```
-
-### Debugging
-
-- Use `objdump -d` to inspect the compiled `.efi` binary
-- The ISO contains the full image structure from `image/` plus the bootloader
-
-## Code Conventions
-
-### No Standard Library
-
-All code uses `#![no_std]` and `#![no_main]` attributes. Use `uefi` crate APIs instead of std.
-
-### Entry Points
-
-- Bootloader entry: `#[entry]` macro from `uefi` crate (see `boot/src/main.rs`)
-- Must initialize UEFI helpers: `uefi::helpers::init().unwrap()`
-
-### Dependencies
-
-- **`uefi = "0.36"`** with features `["panic_handler", "logger"]` for bootloader
-- **`log = "0.4"`** for logging (outputs via UEFI console)
-
-### Rust Edition
-
-Uses **`edition = "2024"`** (latest edition) across all crates.
-
-## Common Patterns
-
-### UEFI API Usage
-
-```rust
-use uefi::prelude::*;
-use log::info;
-
-#[entry]
-fn main() -> Status {
-    uefi::helpers::init().unwrap();
-    info!("Log messages go to UEFI console");
-    boot::stall(Duration::from_secs(10));  // Use UEFI boot services
-    Status::SUCCESS
-}
-```
-
-### Image Structure
-
-- `image/EFI/EFI/BOOT/` - Standard UEFI boot path
-- `image/EFI/CORE/` - Core OS modules
-- `image/HOME/` - User-space files
-- `image/MODS/` - Kernel modules/extensions
-
-## Important Notes
-
-- **No tests**: The bootloader cannot run standard Rust tests (incompatible with `#![no_std]` UEFI target)
-- **Separate target directories**: Each workspace member has its own target directory (see `.gitignore`)
-- **UEFI limitations**: No heap allocation, threading, or file I/O without explicit UEFI protocol usage
-- **Status returns**: Functions return `uefi::Status` instead of `Result`
-
-## When Adding Features
-
-1. Keep bootloader minimal - only boot logic in `boot/`
-2. OS functionality goes in `core/` (kernel) or `home/` (userspace)
-3. Shared utilities go in `libs/`
-4. Always use UEFI-safe APIs - check `uefi` crate documentation
-5. Remember: no panicking, no unwinding - use UEFI status codes
+Use these notes to keep the kernel bootable, the ISO reproducible, and cargo/GRUB expectations aligned.
