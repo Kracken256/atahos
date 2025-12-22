@@ -87,7 +87,7 @@ ISO_NAME="atahos-${{ARCH}}-${{PROFILE}}.iso"
 VM_NAME="atahos_vm"
 
 # Launch virtual machine with the built ISO
-qemu-system-x86_64 -cdrom "target/${{PROFILE}}/${{ISO_NAME}}" -m 512M -boot d -name ${{VM_NAME}} -serial stdio
+clear -x; qemu-system-${{ARCH}} -cdrom "target/${{PROFILE}}/${{ISO_NAME}}" -m 512M -boot d -name ${{VM_NAME}} -serial stdio
 "#,
         profile = profile,
         arch = target.split('-').next().unwrap(),
