@@ -14,3 +14,4 @@ panic = "abort"
 compiler_builtins = { version = "0.1", features = ["mem"] }
 log = "0.4"
 com_logger = "0.1"
+limine = "0.5"

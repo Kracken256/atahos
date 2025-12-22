@@ -13,7 +13,7 @@ fn main() {
     let target = env::var("TARGET").expect("TARGET not set");
 
     create_build_iso_script(&manifest_dir, &profile, &target);
-    create_run_script(&manifest_dir, &profile);
+    create_run_script(&manifest_dir, &profile, &target);
 }
 
 /// Create a script to build the ISO after the binary is compiled
@@ -26,11 +26,25 @@ set -e
 TARGET_TRIPLE="{target}"
 PROFILE="{profile}"
 
-# Copy the compiled binary to iso_root
-cp "target/${{TARGET_TRIPLE}}/${{PROFILE}}/atahos_core" iso_root/boot/atahos_core
+# Copy the iso_root directory to target
+rm -rf iso_root_temp
+cp -r iso_root iso_root_temp
 
-# Build the ISO
-grub-mkrescue -o "target/${{TARGET_TRIPLE}}/${{PROFILE}}/atahos.iso" iso_root
+# Copy the compiled binary to iso_root
+cp "target/${{TARGET_TRIPLE}}/${{PROFILE}}/atahos_core" iso_root_temp/boot/atahos_core
+
+# Copy kernel file
+cp "target/${{TARGET_TRIPLE}}/${{PROFILE}}/atahos_core" iso_root_temp/boot/atahos_core
+
+# Create the bootable ISO.
+xorriso -as mkisofs -R -r -J -b boot/limine/limine-bios-cd.bin \
+        -no-emul-boot -boot-load-size 4 -boot-info-table -hfsplus \
+        -apm-block-size 2048 --efi-boot boot/limine/limine-uefi-cd.bin \
+        -efi-boot-part --efi-boot-image --protective-msdos-label \
+        iso_root_temp -o target/${{TARGET_TRIPLE}}/${{PROFILE}}/atahos.iso
+
+# Install Limine stage 1 and 2 for legacy BIOS boot.
+./limine/limine bios-install target/${{TARGET_TRIPLE}}/${{PROFILE}}/atahos.iso
 
 echo "ISO created at target/${{TARGET_TRIPLE}}/${{PROFILE}}/atahos.iso"
 "#,
@@ -54,18 +68,22 @@ echo "ISO created at target/${{TARGET_TRIPLE}}/${{PROFILE}}/atahos.iso"
 }
 
 /// Create a script to run the virtual machine after the ISO is built
-fn create_run_script(manifest_dir: &Path, profile: &str) {
+fn create_run_script(manifest_dir: &Path, profile: &str, target: &str) {
     let script_path = manifest_dir.join("run.sh");
     let script_content = format!(
         r#"#!/bin/bash
 set -e
 
+TARGET_TRIPLE="{target}"
+PROFILE="{profile}"
+
 VM_NAME="atahos_vm"
 
 # Launch virtual machine with the built ISO
-qemu-system-i386 -cdrom "target/i686-unknown-linux-gnu/{profile}/atahos.iso" -m 512M -boot d -name ${{VM_NAME}} -serial stdio
+qemu-system-x86_64 -cdrom "target/${{TARGET_TRIPLE}}/${{PROFILE}}/atahos.iso" -m 512M -boot d -name ${{VM_NAME}} -serial stdio
 "#,
-        profile = profile
+        profile = profile,
+        target = target
     );
 
     fs::write(&script_path, script_content).expect("Failed to create run.sh script");

@@ -4,5 +4,5 @@
 /home/target
 /libs/target
 build-iso.sh
-iso_root/boot/atahos_core
 run.sh
+iso_root_temp/

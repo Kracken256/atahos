@@ -8,6 +8,7 @@ version = "0.1.0"
 dependencies = [
  "com_logger",
  "compiler_builtins",
+ "limine",
  "log",
 ]
 
@@ -45,6 +46,15 @@ name = "compiler_builtins"
 version = "0.1.160"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6376049cfa92c0aa8b9ac95fae22184b981c658208d4ed8a1dc553cd83612895"
+
+[[package]]
+name = "limine"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af6d2ee42712e7bd2c787365cd1dab06ef59a61becbf87bec7b32b970bd2594b"
+dependencies = [
+ "bitflags 2.10.0",
+]
 
 [[package]]
 name = "lock_api"

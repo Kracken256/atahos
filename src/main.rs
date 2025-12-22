@@ -1,17 +1,25 @@
 #![no_std]
 #![no_main]
 
-mod multiboot;
+mod limine;
 
+use crate::limine::BASE_REVISION;
 use core::panic::PanicInfo;
-use log::error;
+use log::{error, info};
 
 #[unsafe(no_mangle)]
-pub extern "C" fn _start() -> ! {
+pub extern "C" fn kmain() -> ! {
     /* Initialize the COM port loggger */
     com_logger::builder()
         .filter(log::LevelFilter::Trace)
         .setup();
+
+    assert!(BASE_REVISION.is_supported());
+
+    info!(
+        "AtahOS Kernel Initialized - Limine Revision: {}",
+        BASE_REVISION.loaded_revision().unwrap()
+    );
 
     loop {}
 }
