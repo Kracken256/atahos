@@ -43,6 +43,9 @@ xorriso -as mkisofs -R -r -J -b boot/limine/limine-bios-cd.bin \
         -efi-boot-part --efi-boot-image --protective-msdos-label \
         iso_root_temp -o target/${{TARGET_TRIPLE}}/${{PROFILE}}/atahos.iso
 
+# Cleanup
+rm -rf iso_root_temp
+
 # Install Limine stage 1 and 2 for legacy BIOS boot.
 ./limine/limine bios-install target/${{TARGET_TRIPLE}}/${{PROFILE}}/atahos.iso
 
