@@ -63,7 +63,7 @@ set -e
 VM_NAME="atahos_vm"
 
 # Launch virtual machine with the built ISO
-qemu-system-i386 -cdrom "target/i686-unknown-linux-gnu/{profile}/atahos.iso" -m 512M -boot d -name ${{VM_NAME}}
+qemu-system-i386 -cdrom "target/i686-unknown-linux-gnu/{profile}/atahos.iso" -m 512M -boot d -name ${{VM_NAME}} -serial stdio
 "#,
         profile = profile
     );

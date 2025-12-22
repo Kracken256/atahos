@@ -12,3 +12,5 @@ panic = "abort"
 
 [dependencies]
 compiler_builtins = { version = "0.1", features = ["mem"] }
+log = "0.4"
+com_logger = "0.1"
