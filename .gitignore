@@ -6,3 +6,7 @@
 build-iso.sh
 run.sh
 iso_root_temp/
+iso_root/boot/limine/limine-bios-cd.bin
+iso_root/boot/limine/limine-bios.sys
+iso_root/boot/limine/limine-uefi-cd.bin
+iso_root/EFI/BOOT/*.EFI
