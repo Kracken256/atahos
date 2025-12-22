@@ -24,35 +24,37 @@ fn create_build_iso_script(manifest_dir: &Path, profile: &str, target: &str) {
 set -e
 
 TARGET_TRIPLE="{target}"
+ARCH="{arch}"
 PROFILE="{profile}"
+
+ISO_NAME="atahos-${{ARCH}}-${{PROFILE}}.iso"
 
 # Copy the iso_root directory to target
 rm -rf iso_root_temp
 cp -r iso_root iso_root_temp
 
-# Copy the compiled binary to iso_root
-cp "target/${{TARGET_TRIPLE}}/${{PROFILE}}/atahos_core" iso_root_temp/boot/atahos_core
-
 # Copy kernel file
 cp "target/${{TARGET_TRIPLE}}/${{PROFILE}}/atahos_core" iso_root_temp/boot/atahos_core
 
-# Create the bootable ISO.
+# Create the bootable ISO
 xorriso -as mkisofs -R -r -J -b boot/limine/limine-bios-cd.bin \
         -no-emul-boot -boot-load-size 4 -boot-info-table -hfsplus \
         -apm-block-size 2048 --efi-boot boot/limine/limine-uefi-cd.bin \
         -efi-boot-part --efi-boot-image --protective-msdos-label \
-        iso_root_temp -o target/${{TARGET_TRIPLE}}/${{PROFILE}}/atahos.iso
+        iso_root_temp -o target/${{PROFILE}}/${{ISO_NAME}}
 
 # Cleanup
 rm -rf iso_root_temp
 
 # Install Limine stage 1 and 2 for legacy BIOS boot.
-./limine/limine bios-install target/${{TARGET_TRIPLE}}/${{PROFILE}}/atahos.iso
+./limine/limine bios-install target/${{PROFILE}}/${{ISO_NAME}}
 
-echo "ISO created at target/${{TARGET_TRIPLE}}/${{PROFILE}}/atahos.iso"
+# Print in green text
+echo -e "ISO created at \e[32;1mtarget/${{PROFILE}}/${{ISO_NAME}}\e[0m"
 "#,
         target = target,
-        profile = profile
+        arch = target.split('-').next().unwrap(),
+        profile = profile,
     );
 
     fs::write(&script_path, script_content).expect("Failed to create build-iso script");
@@ -78,14 +80,17 @@ fn create_run_script(manifest_dir: &Path, profile: &str, target: &str) {
 set -e
 
 TARGET_TRIPLE="{target}"
+ARCH="{arch}"
 PROFILE="{profile}"
 
+ISO_NAME="atahos-${{ARCH}}-${{PROFILE}}.iso"
 VM_NAME="atahos_vm"
 
 # Launch virtual machine with the built ISO
-qemu-system-x86_64 -cdrom "target/${{TARGET_TRIPLE}}/${{PROFILE}}/atahos.iso" -m 512M -boot d -name ${{VM_NAME}} -serial stdio
+qemu-system-x86_64 -cdrom "target/${{PROFILE}}/${{ISO_NAME}}" -m 512M -boot d -name ${{VM_NAME}} -serial stdio
 "#,
         profile = profile,
+        arch = target.split('-').next().unwrap(),
         target = target
     );
 
