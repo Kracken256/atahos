@@ -16,7 +16,7 @@ static ALLOCATOR: Talck<spin::Mutex<()>, ClaimOnOom> = Talc::new(unsafe {
 })
 .lock();
 
-pub fn initialize_vmm(_pmm: Arc<spin::Mutex<PhysicalMemoryAllocator>>) {
+pub fn init(_pmm: Arc<spin::Mutex<PhysicalMemoryAllocator>>) {
     info!("Initializing virtual memory manager...");
 
     // TODO: Setup VMM using physical frames from PMM

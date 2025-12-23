@@ -30,7 +30,7 @@ static _START_MARKER: RequestsStartMarker = RequestsStartMarker::new();
 #[unsafe(link_section = ".requests_end_marker")]
 static _END_MARKER: RequestsEndMarker = RequestsEndMarker::new();
 
-pub fn validate_limine_version() {
+pub fn validate_version() {
     if !BASE_REVISION.is_supported() {
         panic!("Limine bootloader version not supported");
     } else {

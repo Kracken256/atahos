@@ -77,7 +77,7 @@ fn memory_region_to_string(ty: EntryType) -> &'static str {
     }
 }
 
-pub fn initialize_pmm() -> Arc<spin::Mutex<PhysicalMemoryAllocator>> {
+pub fn init() -> Arc<spin::Mutex<PhysicalMemoryAllocator>> {
     info!("Supplying memory regions to physical memory manager...");
 
     let mmap_response = MEMORY_MAP_REQUEST

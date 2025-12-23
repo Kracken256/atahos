@@ -3,21 +3,14 @@
 
 extern crate alloc;
 
-mod interupts;
+mod interrupts;
 mod limine;
 mod logger;
 mod paging;
 mod pmm;
 mod vmm;
 
-use crate::{
-    interupts::initialize_interrupts,
-    limine::{FRAMEBUFFER_REQUEST, validate_limine_version},
-    logger::initialize_logger,
-    paging::initialize_paging,
-    pmm::initialize_pmm,
-    vmm::initialize_vmm,
-};
+use crate::limine::FRAMEBUFFER_REQUEST;
 use log::error;
 
 #[panic_handler]
@@ -31,12 +24,12 @@ pub extern "C" fn rust_eh_personality() {}
 
 #[unsafe(no_mangle)]
 pub extern "C" fn kmain() -> ! {
-    initialize_logger();
-    validate_limine_version();
-    initialize_interrupts();
-    initialize_paging();
-    let pmm = initialize_pmm();
-    initialize_vmm(pmm);
+    logger::init();
+    limine::validate_version();
+    interrupts::init();
+    paging::init();
+    let pmm = pmm::init();
+    vmm::init(pmm);
     splash_screen();
 
     loop {}

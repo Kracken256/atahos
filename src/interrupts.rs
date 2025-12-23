@@ -1,6 +1,6 @@
 use log::info;
 
-pub fn initialize_interrupts() {
+pub fn init() {
     info!("Initializing interrupts...");
 
     // TODO: Setup IDT, PICs, and enable interrupts

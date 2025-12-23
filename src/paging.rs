@@ -1,6 +1,6 @@
 use log::info;
 
-pub fn initialize_paging() {
+pub fn init() {
     info!("Initializing paging...");
 
     // TODO: Setup initial page tables and enable paging
