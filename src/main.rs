@@ -4,20 +4,21 @@
 extern crate alloc;
 
 mod limine;
+mod logger;
 mod pmm;
 mod vmm;
 
 use crate::{
-    limine::{FRAMEBUFFER_REQUEST, MEMORY_MAP_REQUEST, validate_limine_version},
-    pmm::PhysicalMemoryAllocator,
+    limine::{FRAMEBUFFER_REQUEST, validate_limine_version},
+    logger::initialize_logger,
+    pmm::initialize_pmm,
+    vmm::initialize_vmm,
 };
-use ::limine::memory_map::EntryType;
-use alloc::{collections::btree_map::BTreeMap, format, sync::Arc};
-use core::panic::PanicInfo;
+use alloc::{collections::btree_map::BTreeMap, format, vec::Vec};
 use log::{error, info};
 
 #[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
+fn panic(info: &core::panic::PanicInfo) -> ! {
     error!("{}", info);
     loop {}
 }
@@ -29,8 +30,10 @@ pub extern "C" fn rust_eh_personality() {}
 pub extern "C" fn kmain() -> ! {
     initialize_logger();
     validate_limine_version();
+    initialize_interrupts();
+    initialize_paging();
     let pmm = initialize_pmm();
-    initialize_vmm(pmm.clone());
+    initialize_vmm(pmm);
     splash_screen();
 
     let mut m: BTreeMap<i32, i32> = BTreeMap::new();
@@ -40,82 +43,31 @@ pub extern "C" fn kmain() -> ! {
     info!("BTreeMap contents: {:?}", m);
     info!("{}", format!("Formatted string: {}", 42));
 
+    let mut v: Vec<u8> = alloc::vec::Vec::new();
+    v.resize(10000, 0);
+
     loop {}
 }
 
-fn initialize_logger() {
-    com_logger::builder()
-        .filter(log::LevelFilter::Trace)
-        .setup();
+fn initialize_interrupts() {
+    info!("Initializing interrupts...");
+
+    // TODO: Setup IDT, PICs, and enable interrupts
+
+    info!("Interrupts initialized.");
 }
 
-fn memory_region_to_string(ty: EntryType) -> &'static str {
-    match ty {
-        EntryType::USABLE => "Usable",
-        EntryType::RESERVED => "Reserved",
-        EntryType::ACPI_RECLAIMABLE => "ACPI Reclaimable",
-        EntryType::ACPI_NVS => "ACPI NVS",
-        EntryType::BAD_MEMORY => "Bad Memory",
-        EntryType::BOOTLOADER_RECLAIMABLE => "Bootloader Reclaimable",
-        _ => "Unknown",
-    }
-}
+fn initialize_paging() {
+    info!("Initializing paging...");
 
-fn initialize_pmm() -> Arc<PhysicalMemoryAllocator> {
-    info!("Supplying memory regions to physical memory manager...");
+    // TODO: Setup initial page tables and enable paging
 
-    let mmap_response = MEMORY_MAP_REQUEST
-        .get_response()
-        .expect("expected memory map from limine bootloader");
-
-    let mut pmm = PhysicalMemoryAllocator::new();
-
-    for entry in mmap_response.entries() {
-        info!(
-            "Region: base={:#x}, length={:#x}, type={}",
-            entry.base,
-            entry.length,
-            memory_region_to_string(entry.entry_type)
-        );
-
-        match entry.entry_type {
-            EntryType::USABLE => {
-                info!("Adding region to PMM...");
-
-                let base = entry.base as *mut u8;
-                let size = entry.length as usize;
-
-                unsafe { pmm.add_region(base, size) }
-            }
-
-            _ => continue,
-        }
-    }
-
-    let total_mem = pmm.total_memory();
-    let total_frames = pmm.available_frames();
-
-    info!(
-        "Total memory managed by PMM: {} bytes, {:.2} MiB, {:.2} GiB",
-        total_mem,
-        total_mem as f32 / (1024.0 * 1024.0),
-        total_mem as f32 / (1024.0 * 1024.0 * 1024.0)
-    );
-    info!("Total available frames: {}", total_frames);
-    info!("Physical memory manager initialized.");
-
-    Arc::new(pmm)
-}
-
-fn initialize_vmm(_pmm: Arc<PhysicalMemoryAllocator>) {
-    info!("Initializing virtual memory manager...");
-
-    // TODO: Implement VMM initialization logic here, using the provided PMM.
-
-    info!("Virtual memory manager initialized.");
+    info!("Paging initialized.");
 }
 
 fn splash_screen() {
+    const COLOR: u32 = 0x001f1f1f; // Blue color in ARGB format
+
     let fb = FRAMEBUFFER_REQUEST
         .get_response()
         .unwrap()
@@ -128,10 +80,10 @@ fn splash_screen() {
             let offset = (y * fb.pitch() + x * (fb.bpp() as u64 / 8)) as usize;
             unsafe {
                 let pixel_ptr = fb.addr().add(offset);
-                *pixel_ptr.add(0) = 0xFF; // Blue
-                *pixel_ptr.add(1) = 0x00; // Green
-                *pixel_ptr.add(2) = 0x00; // Red
-                *pixel_ptr.add(3) = 0xFF; // Alpha
+                *pixel_ptr.add(0) = COLOR.wrapping_shr(0) as u8; // Blue
+                *pixel_ptr.add(1) = COLOR.wrapping_shr(8) as u8; // Green
+                *pixel_ptr.add(2) = COLOR.wrapping_shr(16) as u8; // Red
+                *pixel_ptr.add(3) = COLOR.wrapping_shr(24) as u8; // Alpha
             }
         }
     }
