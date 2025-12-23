@@ -9,12 +9,14 @@ struct FreeListFrame {
 
 pub struct PhysicalMemoryAllocator {
     free_list: *mut FreeListFrame,
+    available_frames: usize,
 }
 
 impl PhysicalMemoryAllocator {
     pub const fn new() -> Self {
         Self {
             free_list: core::ptr::null_mut(),
+            available_frames: 0,
         }
     }
 
@@ -25,6 +27,7 @@ impl PhysicalMemoryAllocator {
 
         let frame = self.free_list;
         self.free_list = unsafe { (*frame).next };
+        self.available_frames -= 1;
         Some(frame as *mut Frame)
     }
 
@@ -32,11 +35,14 @@ impl PhysicalMemoryAllocator {
         let frame_ptr = frame as *mut FreeListFrame;
         unsafe { (*frame_ptr).next = self.free_list }
         self.free_list = frame_ptr;
+        self.available_frames += 1;
     }
 
     pub unsafe fn add_region(&mut self, base: *mut u8, size: usize) {
         let mut current = base as usize;
         let end = current + size;
+
+        current = current.next_multiple_of(PAGE_SIZE);
 
         while current + PAGE_SIZE <= end {
             unsafe { self.deallocate_frame(current as *mut Frame) }
@@ -45,26 +51,10 @@ impl PhysicalMemoryAllocator {
     }
 
     pub fn available_frames(&self) -> usize {
-        let mut count = 0;
-        let mut current = self.free_list;
-
-        while !current.is_null() {
-            count += 1;
-            unsafe {
-                current = (*current).next;
-            }
-        }
-
-        count
+        self.available_frames
     }
 
     pub fn total_memory(&self) -> usize {
         self.available_frames() * PAGE_SIZE
     }
 }
-
-unsafe impl Send for PhysicalMemoryAllocator {}
-unsafe impl Sync for PhysicalMemoryAllocator {}
-
-pub static PMM: spin::Mutex<PhysicalMemoryAllocator> =
-    spin::Mutex::new(PhysicalMemoryAllocator::new());
