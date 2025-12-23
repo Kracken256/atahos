@@ -3,19 +3,22 @@
 
 extern crate alloc;
 
+mod interupts;
 mod limine;
 mod logger;
+mod paging;
 mod pmm;
 mod vmm;
 
 use crate::{
+    interupts::initialize_interrupts,
     limine::{FRAMEBUFFER_REQUEST, validate_limine_version},
     logger::initialize_logger,
+    paging::initialize_paging,
     pmm::initialize_pmm,
     vmm::initialize_vmm,
 };
-use alloc::{collections::btree_map::BTreeMap, format, vec::Vec};
-use log::{error, info};
+use log::error;
 
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
@@ -36,33 +39,7 @@ pub extern "C" fn kmain() -> ! {
     initialize_vmm(pmm);
     splash_screen();
 
-    let mut m: BTreeMap<i32, i32> = BTreeMap::new();
-    m.insert(1, 2);
-    m.insert(3, 4);
-    m.insert(5, 6);
-    info!("BTreeMap contents: {:?}", m);
-    info!("{}", format!("Formatted string: {}", 42));
-
-    let mut v: Vec<u8> = alloc::vec::Vec::new();
-    v.resize(10000, 0);
-
     loop {}
-}
-
-fn initialize_interrupts() {
-    info!("Initializing interrupts...");
-
-    // TODO: Setup IDT, PICs, and enable interrupts
-
-    info!("Interrupts initialized.");
-}
-
-fn initialize_paging() {
-    info!("Initializing paging...");
-
-    // TODO: Setup initial page tables and enable paging
-
-    info!("Paging initialized.");
 }
 
 fn splash_screen() {

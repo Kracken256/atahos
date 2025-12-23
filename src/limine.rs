@@ -4,7 +4,8 @@ use limine::{
 };
 use log::info;
 
-pub const KERNEL_BASE: usize = 0xffffffff80000000;
+#[used]
+pub static KERNEL_BASE: usize = 0xffffffff80000000;
 
 /// Sets the base revision to the latest revision supported by the crate.
 /// See specification for further info.
